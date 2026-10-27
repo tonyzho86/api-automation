@@ -1,0 +1,81 @@
+name: API Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: 接口测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: 安装依赖
+        run: uv sync --frozen
+
+      - name: 启动被测服务(SUT)
+        run: |
+          nohup uv run uvicorn sut.app:app --host 127.0.0.1 --port 18800 > sut.log 2>&1 &
+          echo $! > sut.pid
+
+      - name: 等待服务就绪
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:18800/api/health > /dev/null; then
+              echo "SUT ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::SUT 未能在 30 秒内启动"
+          cat sut.log
+          exit 1
+
+      - name: 执行测试
+        run: uv run pytest --junitxml=reports/junit.xml
+
+      - name: 上传 HTML 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report
+          path: reports/report.html
+          if-no-files-found: warn
+
+      - name: 上传 JUnit 结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results
+          path: reports/junit.xml
+          if-no-files-found: warn
+
+      - name: 失败时打印服务日志
+        if: failure()
+        run: cat sut.log || true
+
+      - name: 停止被测服务
+        if: always()
+        run: |
+          if [ -f sut.pid ]; then
+            kill "$(cat sut.pid)" 2>/dev/null || true
+          fi
+          pkill -f "uvicorn sut.app:app" 2>/dev/null || true

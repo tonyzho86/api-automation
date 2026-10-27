@@ -1,0 +1,27 @@
+# 订单金额用例数据 —— 用例代码只写一遍,场景都放在这里。
+# 种子商品价格:1=机械键盘 399 / 3=显示器支架 159 / 5=无线鼠标 129 / 10=六类网线 29
+
+- name: 单商品_数量2_无券
+  items:
+    - {product_id: 1, quantity: 2}
+  coupon_code: null
+  expected_total: 798.0
+  expected_discount: 0.0
+  expected_payable: 798.0
+
+- name: 两种商品_无券
+  items:
+    - {product_id: 3, quantity: 1}
+    - {product_id: 10, quantity: 2}
+  coupon_code: null
+  expected_total: 217.0
+  expected_discount: 0.0
+  expected_payable: 217.0
+
+- name: 单商品_满100_用券
+  items:
+    - {product_id: 5, quantity: 1}
+  coupon_code: SAVE20
+  expected_total: 129.0
+  expected_discount: 20.0
+  expected_payable: 109.0

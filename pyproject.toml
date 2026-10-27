@@ -1,0 +1,42 @@
+[project]
+name = "api-automation"
+version = "0.1.0"
+description = "接口测试实战:被测系统(SUT)+ pytest 接口测试框架"
+requires-python = ">=3.11"
+dependencies = [
+    # ---- 被测系统(SUT)需要的 ----
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    # ---- 测试框架需要的 ----
+    "requests>=2.32",
+    "pytest>=8.3",
+    "pytest-html>=4.1",
+    "jsonschema>=4.23",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+# 让参数化用例的 id 保持中文原样,不要被转义成 单商品
+disable_test_id_escaping_and_forfeit_all_rights_to_community_support = true
+
+addopts = [
+    "-v",
+    "--strict-markers",
+    # 默认不跑"追 bug"用例:它们断言的是"正确行为",而靶场是故意有缺陷的,
+    # 直接跑会一片红。要主动看红灯时用:  uv run pytest -m bug
+    "-m", "not bug",
+    "--html=reports/report.html",
+    "--self-contained-html",
+]
+
+markers = [
+    "smoke: 冒烟用例,改动后快速验证主流程",
+    "bug: 追 bug 用例 —— 断言的是\"正确行为\",跑它就会红,红出来的就是被测系统的缺陷",
+]
+
+[tool.uv]
+package = false
